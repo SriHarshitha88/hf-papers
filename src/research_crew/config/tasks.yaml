@@ -1,0 +1,23 @@
+fetch_papers:
+  description: >
+    Fetch research papers using smart fetching from ArXiv and HuggingFace.
+    Extract title, abstract, authors, publication date, paper URL, and ArXiv ID.
+    Ensure proper categorization and deduplication of papers.
+  expected_output: >
+    A list of research papers with complete metadata including title, abstract, 
+    authors, publication date, ArXiv ID, and direct links to papers.
+
+summarize_papers:
+  description: >
+    Create structured summaries for each research paper including key contributions,
+    methodology, significance, and technical overview. Categorize each paper.
+  expected_output: >
+    Structured summaries for all papers with key_contributions, methodology, 
+    significance, technical_summary, and category fields populated.
+
+store_papers:
+  description: >
+    Store the processed research papers and their summaries in Supabase database.
+    Handle any duplicate entries and ensure data integrity.
+  expected_output: >
+    Confirmation of successful database storage with number of papers stored. 

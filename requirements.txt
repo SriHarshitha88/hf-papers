@@ -1,0 +1,13 @@
+crewai
+crewai-tools
+langchain
+langchain-community
+supabase
+httpx
+feedparser
+requests
+streamlit
+python-dotenv
+pyyaml
+pandas
+chromadb
