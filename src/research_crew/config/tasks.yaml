@@ -11,13 +11,24 @@ summarize_papers:
   description: >
     Create structured summaries for each research paper including key contributions,
     methodology, significance, and technical overview. Categorize each paper.
+    The output must include all fields: key_contributions, methodology, significance,
+    technical_summary, practical_applications, limitations, primary_category,
+    and difficulty_level.
   expected_output: >
-    Structured summaries for all papers with key_contributions, methodology, 
-    significance, technical_summary, and category fields populated.
+    A list of papers with complete summaries, where each paper contains:
+    - key_contributions (list)
+    - methodology (string)
+    - significance (string)
+    - technical_summary (string)
+    - practical_applications (string)
+    - limitations (string)
+    - primary_category (string)
+    - difficulty_level (string)
 
 store_papers:
   description: >
     Store the processed research papers and their summaries in Supabase database.
-    Handle any duplicate entries and ensure data integrity.
+    Ensure all required fields are present: title, abstract, authors, primary_category,
+    and technical_summary. Also store optional fields if available.
   expected_output: >
     Confirmation of successful database storage with number of papers stored. 

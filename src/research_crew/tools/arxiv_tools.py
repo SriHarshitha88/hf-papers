@@ -7,6 +7,7 @@ import feedparser
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from pydantic import Field
+import logging
 
 class OptimizedArXivTool(BaseTool):
     name: str = "ArXiv Research Fetcher"
@@ -20,6 +21,7 @@ class OptimizedArXivTool(BaseTool):
             limit: Number of papers to fetch
             days_back: How many days back to search
         """
+        logging.info(f"Fetching {limit} papers from ArXiv for the last {days_back} days")
         
         # ArXiv categories for AI/ML research
         categories = [
@@ -40,6 +42,7 @@ class OptimizedArXivTool(BaseTool):
         date_filter = f'submittedDate:[{start_date.strftime("%Y%m%d")}* TO {end_date.strftime("%Y%m%d")}*]'
         
         search_query = f'({cat_query}) AND {date_filter}'
+        logging.info(f"Search query: {search_query}")
         
         # ArXiv API parameters
         params = {
@@ -56,6 +59,7 @@ class OptimizedArXivTool(BaseTool):
         url = base_url + query_string
         
         try:
+            logging.info(f"Making request to ArXiv API: {url}")
             response = requests.get(url, timeout=30)
             response.raise_for_status()
             
@@ -97,25 +101,28 @@ class OptimizedArXivTool(BaseTool):
                         'abstract': summary,
                         'authors': authors,
                         'arxiv_id': arxiv_id,
+                        'paper_url': f"https://arxiv.org/abs/{arxiv_id}",
                         'pdf_url': f"https://arxiv.org/pdf/{arxiv_id}.pdf",
-                        'arxiv_url': f"https://arxiv.org/abs/{arxiv_id}",
-                        'published': published,
+                        'published_date': published,
                         'categories': categories_list,
                         'primary_category': primary_category,
                         'source': 'arxiv',
                         'fetched_at': datetime.now().isoformat()
                     }
                     
+                    logging.info(f"Successfully parsed paper: {title}")
                     papers.append(paper_data)
                     
                 except Exception as e:
-                    print(f"Error parsing paper: {e}")
+                    logging.error(f"Error parsing paper: {str(e)}")
                     continue
             
+            logging.info(f"Successfully fetched {len(papers)} papers from ArXiv")
             return papers[:limit]  # Return exactly the requested number
             
         except Exception as e:
-            return f"Error fetching from ArXiv: {str(e)}"
+            logging.error(f"Error fetching from ArXiv: {str(e)}")
+            return []
     
     def _classify_paper(self, categories: List[str], title: str, abstract: str) -> str:
         """Classify paper into main research area"""
@@ -157,28 +164,52 @@ class HuggingFaceSupplementTool(BaseTool):
         """Get trending papers from HF RSS as supplement"""
         
         rss_url = "https://jamesg.blog/hf-papers.xml"
+        logging.info(f"Fetching {limit} papers from HuggingFace RSS feed")
         
         try:
             feed = feedparser.parse(rss_url)
             papers = []
             
             for entry in feed.entries[:limit]:
-                paper = {
-                    'title': entry.title,
-                    'abstract': entry.get('summary', ''),
-                    'link': entry.link,
-                    'published': entry.get('published', ''),
-                    'authors': [author.get('name', '') for author in entry.get('authors', [])],
-                    'primary_category': 'Trending Research',
-                    'source': 'huggingface_trending',
-                    'fetched_at': datetime.now().isoformat()
-                }
-                papers.append(paper)
+                try:
+                    # Extract and clean the data
+                    title = entry.title.strip()
+                    abstract = entry.get('summary', '').strip()
+                    link = entry.link.strip()
+                    
+                    # Get authors, default to empty list if none found
+                    authors = []
+                    if 'authors' in entry:
+                        authors = [author.get('name', '').strip() for author in entry.authors if author.get('name')]
+                    
+                    # Get published date
+                    published = entry.get('published', '')
+                    
+                    paper = {
+                        'title': title,
+                        'abstract': abstract,
+                        'paper_url': link,
+                        'published_date': published,
+                        'authors': authors,
+                        'primary_category': 'Trending Research',
+                        'source': 'huggingface_trending',
+                        'fetched_at': datetime.now().isoformat(),
+                        'technical_summary': abstract[:500] + '...' if len(abstract) > 500 else abstract  # Initial technical summary
+                    }
+                    
+                    logging.info(f"Successfully parsed paper: {title}")
+                    papers.append(paper)
+                    
+                except Exception as e:
+                    logging.error(f"Error parsing paper entry: {str(e)}")
+                    continue
             
+            logging.info(f"Successfully fetched {len(papers)} papers from HuggingFace")
             return papers
             
         except Exception as e:
-            return f"Error fetching HF trending: {str(e)}"
+            logging.error(f"Error fetching HF trending: {str(e)}")
+            return []
 
 class SmartResearchFetcher(BaseTool):
     name: str = "Smart Research Fetcher"
@@ -194,34 +225,24 @@ class SmartResearchFetcher(BaseTool):
     def _run(self, total_limit: int = 5) -> List[Dict]:
         """
         Smart fetching strategy:
-        - 80% from ArXiv (most recent, high quality)
-        - 20% from HuggingFace trending (curated highlights)
+        - If total_limit is 0, fetch only from HuggingFace
+        - Otherwise, fetch from both sources
         """
-        
-        arxiv_count = max(1, int(total_limit * 0.8))  # At least 1 from ArXiv
-        hf_count = total_limit - arxiv_count
-        
         all_papers = []
         
-        # Fetch from ArXiv
+        # Fetch from HuggingFace
         try:
-            arxiv_papers = self.arxiv_tool._run(limit=arxiv_count, days_back=7)
-            if isinstance(arxiv_papers, list):
-                all_papers.extend(arxiv_papers)
-        except Exception as e:
-            print(f"ArXiv fetch failed: {e}")
-        
-        # Supplement with HuggingFace trending
-        try:
-            hf_papers = self.hf_tool._run(limit=hf_count)
+            hf_papers = self.hf_tool._run(limit=total_limit)
             if isinstance(hf_papers, list):
                 all_papers.extend(hf_papers)
+                logging.info(f"Successfully fetched {len(hf_papers)} papers from HuggingFace")
         except Exception as e:
-            print(f"HF fetch failed: {e}")
+            logging.error(f"HF fetch failed: {e}")
         
         # Remove duplicates based on title similarity
         unique_papers = self._deduplicate_papers(all_papers)
         
+        logging.info(f"Total unique papers after deduplication: {len(unique_papers)}")
         return unique_papers[:total_limit]
     
     def _deduplicate_papers(self, papers: List[Dict]) -> List[Dict]:

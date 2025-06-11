@@ -22,7 +22,6 @@ class ResearchCrew:
             self.tasks_config = yaml.safe_load(f)
     
     def setup_tools(self):
-        # Use the smart fetcher that combines ArXiv and HuggingFace sources
         self.research_fetcher = SmartResearchFetcher()
         self.summarizer_tool = EnhancedSummarizerTool()
         self.supabase_tool = SupabaseTool()

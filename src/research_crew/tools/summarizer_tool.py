@@ -54,7 +54,7 @@ class EnhancedSummarizerTool(BaseTool):
             "technical_summary": "2-sentence technical overview for experts",
             "practical_applications": "Real-world applications of this research",
             "limitations": "Key limitations or areas for future work",
-            "category": "{category}",
+            "primary_category": "{category}",
             "difficulty_level": "Beginner/Intermediate/Advanced",
             "keywords": ["5-6 relevant keywords"]
         }}
@@ -75,7 +75,7 @@ class EnhancedSummarizerTool(BaseTool):
                 'technical_summary': response,
                 'practical_applications': '',
                 'limitations': '',
-                'category': category,
+                'primary_category': category,
                 'difficulty_level': 'Intermediate',
                 'keywords': []
             }
@@ -84,7 +84,7 @@ class EnhancedSummarizerTool(BaseTool):
         required_fields = [
             'key_contributions', 'methodology', 'significance',
             'technical_summary', 'practical_applications', 'limitations',
-            'category', 'difficulty_level', 'keywords'
+            'primary_category', 'difficulty_level', 'keywords'
         ]
         for field in required_fields:
             if field not in summary:
