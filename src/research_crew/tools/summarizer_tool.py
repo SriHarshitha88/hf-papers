@@ -1,15 +1,27 @@
 from crewai.tools import BaseTool
-from langchain_community.llms import OpenAI
-from typing import Dict
+from langchain_openai import OpenAI
+from typing import Dict, List
 import os
+import json
 
 class EnhancedSummarizerTool(BaseTool):
     name: str = "Enhanced Research Summarizer"
     description: str = "Creates structured summaries optimized for ArXiv papers"
     
-    def _run(self, paper: Dict) -> Dict:
-        """Generate enhanced summary with category-specific analysis"""
-        
+    def _run(self, papers: List[Dict]) -> List[Dict]:
+        """Batch process: Generate enhanced summaries for a list of papers"""
+        results = []
+        for paper in papers:
+            try:
+                summary = self._summarize_paper(paper)
+                results.append(summary)
+            except Exception as e:
+                print(f"Error summarizing paper: {str(e)}")
+                results.append(paper)  # Append original if summarization fails
+        return results
+
+    def _summarize_paper(self, paper: Dict) -> Dict:
+        """Summarize a single paper"""
         category = paper.get('primary_category', 'Machine Learning')
         title = paper.get('title', '')
         abstract = paper.get('abstract', '')
@@ -28,12 +40,12 @@ class EnhancedSummarizerTool(BaseTool):
         # This would connect to your LLM
         prompt = f"""
         Analyze this {category} research paper and create a structured summary:
-        
+
         Title: {title}
         Abstract: {abstract}
-        
+
         {specific_prompt}
-        
+
         Provide analysis in this JSON format:
         {{
             "key_contributions": ["3-4 main contributions"],
@@ -48,26 +60,36 @@ class EnhancedSummarizerTool(BaseTool):
         }}
         """
         
+        llm = OpenAI(temperature=0)
+        response = llm.invoke(prompt)
+
+        # Try to parse as JSON
         try:
-            llm = OpenAI(temperature=0)
-            response = llm.predict(prompt)
-            
-            # Parse the response into a structured format
+            summary = json.loads(response)
+        except json.JSONDecodeError:
+            # Fallback: use full response as technical_summary
             summary = {
                 'key_contributions': [],
                 'methodology': '',
                 'significance': '',
-                'technical_summary': '',
+                'technical_summary': response,
                 'practical_applications': '',
                 'limitations': '',
                 'category': category,
                 'difficulty_level': 'Intermediate',
                 'keywords': []
             }
-            
-            # TODO: Implement proper response parsing
-            # This is a placeholder for the actual parsing logic
-            
-            return summary
-        except Exception as e:
-            return f"Error generating summary: {str(e)}" 
+        
+        # Ensure all required fields exist
+        required_fields = [
+            'key_contributions', 'methodology', 'significance',
+            'technical_summary', 'practical_applications', 'limitations',
+            'category', 'difficulty_level', 'keywords'
+        ]
+        for field in required_fields:
+            if field not in summary:
+                summary[field] = [] if field in ['key_contributions', 'keywords'] else ''
+        
+        # Merge with original paper data
+        paper.update(summary)
+        return paper

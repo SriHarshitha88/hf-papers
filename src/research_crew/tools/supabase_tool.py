@@ -24,11 +24,61 @@ class SupabaseTool(BaseTool):
         """Store papers and summaries in Supabase"""
         
         try:
+            # Validate and clean data before insertion
+            cleaned_papers = []
+            for paper in papers_data:
+                cleaned_paper = self._clean_paper_data(paper)
+                if cleaned_paper:
+                    cleaned_papers.append(cleaned_paper)
+            
+            if not cleaned_papers:
+                return "No valid papers to store"
+            
             # Insert papers into database
-            result = self._supabase.table('research_papers').insert(papers_data).execute()
-            return f"Successfully stored {len(papers_data)} papers"
+            result = self._supabase.table('research_papers').insert(cleaned_papers).execute()
+            return f"Successfully stored {len(cleaned_papers)} papers"
         except Exception as e:
+            print(f"Error storing papers: {str(e)}")
             return f"Error storing papers: {str(e)}"
+    
+    def _clean_paper_data(self, paper: Dict) -> Dict:
+        """Clean and validate paper data before storage"""
+        required_fields = {
+            'title': str,
+            'abstract': str,
+            'authors': list,
+            'category': str,
+            'technical_summary': str
+        }
+        
+        cleaned_paper = {}
+        
+        # Ensure required fields exist and have correct types
+        for field, field_type in required_fields.items():
+            value = paper.get(field)
+            if value is None:
+                if field_type == list:
+                    cleaned_paper[field] = []
+                elif field_type == str:
+                    cleaned_paper[field] = ''
+                else:
+                    cleaned_paper[field] = None
+            else:
+                cleaned_paper[field] = value
+        
+        # Add optional fields if they exist
+        optional_fields = [
+            'key_contributions', 'methodology', 'significance',
+            'practical_applications', 'limitations', 'difficulty_level',
+            'keywords', 'paper_url', 'arxiv_id', 'published_date'
+        ]
+        
+        
+        for field in optional_fields:
+            if field in paper:
+                cleaned_paper[field] = paper[field]
+        
+        return cleaned_paper
             
     def check_duplicate(self, paper_url: str) -> bool:
         """Check if a paper already exists in the database"""
