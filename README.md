@@ -60,7 +60,7 @@ An intelligent research paper aggregator that combines papers from ArXiv and Hug
 
 ## 🎥 Video Demo
 
-[![Video Demo](https://img.shields.io/badge/Video-Demo-red)](https://your-video-demo-link-here)
+[![Video Demo](https://img.shields.io/badge/Video-Demo-red)](https://github.com/user-attachments/assets/ba6303df-4ea8-48e0-9650-6a00d56fdd15)
 
 Watch our video demo to see the AI Research Paper Aggregator in action:
 - Smart paper collection and processing
