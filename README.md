@@ -68,8 +68,6 @@ Watch our video demo to see the AI Research Paper Aggregator in action:
 - Interactive dashboard features
 - Real-time updates and filtering
 
-[Click here to watch the demo](https://github.com/user-attachments/assets/ffaeb869-a36b-4e03-9b8d-81d42e074da6)
-
 ## 📊 Project Workflow
 
 ### 1. Paper Collection & Processing Pipeline
